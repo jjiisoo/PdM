@@ -1,0 +1,9 @@
+# SQLite 데이터베이스 및 임시 파일
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Python 캐시
+__pycache__/
+*.pyc
