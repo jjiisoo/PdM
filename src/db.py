@@ -90,3 +90,17 @@ def upsert(con, df):
     after = con.execute("SELECT COUNT(*) FROM sensor_raw").fetchone()[0]
     inserted = after - before  # 새로 추가된 행 수 계산
     return inserted, len(df) - inserted  # 추가된 행 수와 건너뛴 행 수 반환
+
+
+def log_run(con, window_start, window_end, received, inserted, skipped, note=""):
+    con.execute(
+        "INSERT INTO collect_log (run_at, window_start, window_end,"
+        " rows_received, rows_inserted, rows_skipped, note)"
+        " VALUES (datetime('now'), ?, ?, ?, ?, ?, ?)",
+        (str(window_start), str(window_end), received, inserted, skipped, note),
+    )
+    con.commit()
+
+
+def read_all(con: sqlite3.Connection) -> pd.DataFrame:
+    return pd.read_sql_query("SELECT * FROM sensor_raw ORDER BY ts, machine_id", con)

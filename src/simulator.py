@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from clean import run_pipeline
+from evaluate import score
 
 MACHINES = {
     # machine_id : (품질등급, 마모한계 계수(과부하 고장 판단 기준), 공구교체주기(분))
@@ -351,3 +353,80 @@ def sample_window(n_minutes=60, end=None, seed=None):
     truth = simulate_truth(n_minutes=n_minutes, start=start, seed=seed)
     obs = pollute(truth, seed=seed + 1)
     return obs
+
+
+clean, log, rep = run_pipeline(obs)
+
+# print("[단위 보정 건수]", rep["temp_unit"], "| 진동:", rep["vib_unit"])
+
+# print(pd.Series(rep["range"]).to_string())
+
+# print(pd.Series(rep["filled"]).to_string())
+
+# print(pd.Series(rep["drift_slopes"]).round(4).to_string())
+
+
+sens = SENSOR_COLS
+
+t = truth.copy()
+t["ts"] = pd.to_datetime(t["ts"], utc=True).dt.round("min")
+
+m = clean.merge(
+    t[["machine_id", "ts"] + sens],
+    on=["machine_id", "ts"],
+    how="inner",
+    suffixes=("_c", "_t"),
+)
+
+print("대조 가능 행:", f"{len(m):,} / 참값 {len(truth):,}")
+rows = []
+
+for s in sens:
+    valid = m[f"{s}_c"].notna() & m[f"{s}_t"].notna()
+    err = (m.loc[valid, f"{s}_c"] - m.loc[valid, f"{s}_t"]).abs()
+
+    std = truth[s].std()
+    mae = err.mean()
+
+    rows.append(
+        {
+            "센서": s,
+            "값보유율%": valid.sum() / len(truth) * 100,
+            "MAE": mae,
+            "p95_err": err.quantile(0.95),
+            "max_err": err.max(),
+            "참값std": std,
+            "MAE/std": mae / std if std > 0 else np.nan,
+        }
+    )
+
+comp = pd.DataFrame(rows)
+
+print(
+    comp.to_string(
+        index=False,
+        formatters={
+            "값보유율%": "{:.2f}".format,
+            "MAE": "{:.4f}".format,
+            "p95_err": "{:.4f}".format,
+            "max_err": "{:.3f}".format,
+            "참값std": "{:.3f}".format,
+            "MAE/std": "{:.4f}".format,
+        },
+    )
+)
+
+from clean import detect_and_fix_temp_unit
+
+temp_fixed, _ = detect_and_fix_temp_unit(obs)
+
+pred = obs["air_temp_k"].notna() & temp_fixed["air_temp_k"].ne(obs["air_temp_k"])
+
+result = score(
+    pred,
+    masks["unit_temp"],
+    "공기 온도 단위 탐지",
+)
+
+
+print(pd.DataFrame([result]).to_string(index=False))
