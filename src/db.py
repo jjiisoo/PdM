@@ -72,17 +72,21 @@ if __name__ == "__main__":
 
 
 def upsert(con, df):
-    """(insert된 행 수, 중복으로 건너뛴 행 수)를 돌려줍니다."""
-    df = df.reindex(columns=COLUMNS)
-    before = con.execute("SELECT COUNT(*) FROM sensor_raw").fetchone()[0]
+    df = df.reindex(columns=COLUMNS)  # 저장할 열과 순서 맞춤, 없는 열은 결측값 NULL
+    before = con.execute("SELECT COUNT(*) FROM sensor_raw").fetchone()[
+        0
+    ]  # 저장 전 전체 행 수 확인
     sql = (
-        f"INSERT OR IGNORE INTO sensor_raw ({','.join(COLUMNS)}) "
+        f"INSERT OR IGNORE INTO sensor_raw ({','.join(COLUMNS)}) "  # 제약조건 위반 -> 건너뜀
         f"VALUES ({','.join('?' * len(COLUMNS))})"
     )
     con.executemany(
-        sql, df.where(pd.notna(df), None).itertuples(index=False, name=None)
+        sql,
+        df.where(pd.notna(df), None).itertuples(
+            index=False, name=None
+        ),  # 여러 행을 SQL에 전달
     )
-    con.commit()
+    con.commit()  # 변경사항 확정
     after = con.execute("SELECT COUNT(*) FROM sensor_raw").fetchone()[0]
-    inserted = after - before
-    return inserted, len(df) - inserted
+    inserted = after - before  # 새로 추가된 행 수 계산
+    return inserted, len(df) - inserted  # 추가된 행 수와 건너뛴 행 수 반환
