@@ -340,3 +340,14 @@ print(obs.shape)
 
 truth.to_csv("설비_참값.csv", index=False, encoding="utf-8-sig")
 obs.to_csv("설비_관측.csv", index=False, encoding="utf-8-sig")
+
+
+def sample_window(n_minutes=60, end=None, seed=None):
+    end = pd.Timestamp.utcnow().floor("min") if end is None else pd.Timestamp(end)
+    start = end - pd.Timedelta(minutes=n_minutes)
+    # ★ 시드를 시각에서 뽑으면 같은 날 다시 돌려도 같은 값이 나옵니다
+    if seed is None:
+        seed = int(start.strftime("%Y%m%d%H"))
+    truth = simulate_truth(n_minutes=n_minutes, start=start, seed=seed)
+    obs = pollute(truth, seed=seed + 1)
+    return obs
