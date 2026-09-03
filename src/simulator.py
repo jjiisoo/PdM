@@ -430,3 +430,6 @@ result = score(
 
 
 print(pd.DataFrame([result]).to_string(index=False))
+
+df = pd.read_csv(RAW / "ai4i" / "ai4i2020.csv")
+print("shape:", df.shape)
