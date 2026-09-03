@@ -340,4 +340,3 @@ print(obs.shape)
 
 truth.to_csv("설비_참값.csv", index=False, encoding="utf-8-sig")
 obs.to_csv("설비_관측.csv", index=False, encoding="utf-8-sig")
-masks.to_csv("설비_오염기록.csv", index=False, encoding="utf-8-sig")
