@@ -66,17 +66,10 @@ def add_rolling(
 def make_horizon_label(
     df: pd.DataFrame, horizon: int = 30, src: str = "machine_failure", out: str = "y"
 ) -> pd.DataFrame:
-    """★ 예지보전의 진짜 목표변수: "앞으로 horizon분 안에 고장이 나는가"
-
-    이걸 안 하고 '지금 고장인가'를 맞히면 그건 예지(prediction)가 아니라
-    감지(detection)입니다. 이미 고장난 뒤에 알려주는 모델은 쓸모가 없습니다.
-
-    구현: 미래 구간의 최댓값을 가져오되, 현재 시점은 제외(shift(-1))합니다.
-    """
     df = df.sort_values(["machine_id", "ts"]).copy()
 
     def fwd(s: pd.Series) -> pd.Series:
-        # 뒤집어서 rolling → 다시 뒤집으면 '미래 창'이 됩니다
+        # 뒤집었다가 되돌리면 미래 방향, shift: 현재 시점을 라벨에서 제외
         return s[::-1].rolling(horizon, min_periods=1).max()[::-1].shift(-1)
 
     df[out] = df.groupby("machine_id")[src].transform(fwd)
