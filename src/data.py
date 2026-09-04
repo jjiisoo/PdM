@@ -82,5 +82,30 @@ Xtr, Xte, ytr, yte = train_test_split(
     stratify=y,
 )
 
-dummy = DummyClassifier(strategy="most_frequent").fit(Xtr, ytr)
+from sklearn.dummy import DummyClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+)
+
+dummy = DummyClassifier(strategy="most_frequent")
+dummy.fit(Xtr, ytr)
 dp = dummy.predict(Xte)
+
+print(f"train {Xtr.shape} / test {Xte.shape} | test 고장 {int(yte.sum())}건")
+print("[무조건 정상 모델]")
+print(f"정확도 : {accuracy_score(yte, dp):.4f}")
+print(f"정밀도 : {precision_score(yte, dp, zero_division=0):.4f}")
+print(f"재현율 : {recall_score(yte, dp, zero_division=0):.4f}")
+print(f"F1 : {f1_score(yte, dp, zero_division=0):.4f}")
+
+cm = pd.DataFrame(
+    confusion_matrix(yte, dp, labels=[0, 1]),
+    index=["실제정상", "실제고장"],
+    columns=["예측정상", "예측고장"],
+)
+
+print(cm.to_string())
